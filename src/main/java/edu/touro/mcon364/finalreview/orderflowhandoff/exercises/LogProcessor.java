@@ -4,6 +4,8 @@ import edu.touro.mcon364.finalreview.model.LogLevel;
 import edu.touro.mcon364.finalreview.model.LogMessage;
 
 import java.util.Map;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LogProcessor.
@@ -65,15 +67,23 @@ public class LogProcessor {
     /**
      * Accept one message for processing.
      */
+
+    LinkedBlockingQueue<LogMessage> messages = new LinkedBlockingQueue();
     public void submit(LogMessage message) {
         // TODO: implement
+        messages.add(message);
     }
 
     /**
      * Start the requested number of background workers.
      */
+    ExecutorService pool;
     public void start(int workerCount) {
         // TODO: implement
+        if (workerCount<0){
+            throw new IllegalArgumentException();
+        }
+        pool = Executors.newFixedThreadPool(workerCount);
     }
 
     /**
@@ -89,8 +99,17 @@ public class LogProcessor {
     /**
      * Process one message and update whatever statistics this class tracks.
      */
+    AtomicInteger counter = new AtomicInteger(0);
     private void process(LogMessage message) {
         // TODO: implement
+        submit(message);
+        pool.submit(()->
+                {
+                    messages.poll();
+                    counter.incrementAndGet();
+                }
+        );
+
     }
 
     /**
@@ -98,6 +117,9 @@ public class LogProcessor {
      */
     public void stop() throws InterruptedException {
         // TODO: implement
+        pool.shutdown();
+        pool.awaitTermination(10, TimeUnit.NANOSECONDS);
+        pool.shutdownNow();
     }
 
     /**
@@ -105,14 +127,19 @@ public class LogProcessor {
      */
     public int getTotalProcessed() {
         // TODO: implement
-        return 0;
+        return counter.get();
     }
 
     /**
      * Return a safe snapshot of the counts by level.
      */
+    ConcurrentHashMap<LogLevel, Integer> levelCounts = new ConcurrentHashMap<>();
     public Map<LogLevel, Integer> getCountsByLevel() {
         // TODO: implement
+        levelCounts.put(LogLevel.INFO,0);
+        levelCounts.put(LogLevel.WARN, 0);
+        levelCounts.put(LogLevel.ERROR, 0);
         return Map.of();
+        //return Map.of(levelCounts);
     }
 }
