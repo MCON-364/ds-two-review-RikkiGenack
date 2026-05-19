@@ -1,6 +1,9 @@
 package edu.touro.mcon364.finalreview.orderflowhandoff.exercises;
 
-import edu.touro.mcon364.finalreview.model.Action;import java.util.Optional;
+import edu.touro.mcon364.finalreview.model.Action;
+
+import java.util.ArrayDeque;
+import java.util.Optional;
 
 /**
  * In-class Exercise 1 — Action History
@@ -29,27 +32,42 @@ import edu.touro.mcon364.finalreview.model.Action;import java.util.Optional;
  */
 public class ActionHistory {
 
+    ArrayDeque<Action> undoStack = new ArrayDeque<>();
+    ArrayDeque<Action> redoStack = new ArrayDeque<>();
     public void perform(Action action) {
         // TODO: implement based on the requirements above
+        undoStack.push(action);
+        redoStack.clear();
     }
-
+    //removes and returns the action that should be undone next.
     public Optional<Action> undo() {
         // TODO: implement based on the requirements above
-        return Optional.empty();
+        if (undoStack.isEmpty()){
+            return Optional.empty();
+        }
+        Action undone = undoStack.pop();
+        redoStack.push(undone);
+        return Optional.ofNullable(redoStack.peek());
     }
 
     public Optional<Action> redo() {
         // TODO: implement based on the requirements above
-        return Optional.empty();
+        if (redoStack.isEmpty()){
+            return Optional.empty();
+        }
+        Action action = redoStack.pop();
+        undoStack.push(action);
+        return Optional.ofNullable(undoStack.peek());
+
     }
 
     public int getUndoCount() {
         // TODO: implement based on the requirements above
-        return 0;
+        return undoStack.size();
     }
 
     public int getRedoCount() {
         // TODO: implement based on the requirements above
-        return 0;
+        return redoStack.size();
     }
 }
