@@ -3,6 +3,7 @@ package edu.touro.mcon364.finalreview.orderflowhandoff.homework;
 import edu.touro.mcon364.finalreview.model.SensorReading;
 
 import java.util.DoubleSummaryStatistics;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Homework 2 — Sensor reading processor.
@@ -42,7 +43,7 @@ import java.util.DoubleSummaryStatistics;
  * - If several workers update the same stats, how will those updates stay correct?
  */
 public class SensorProcessor {
-
+    private volatile boolean flag = false;
     /**
      * Accept one sensor reading for processing.
      *
@@ -50,6 +51,7 @@ public class SensorProcessor {
      */
     public void submit(SensorReading reading) {
         // TODO: decide where submitted readings should be stored
+    // if running add data to queue
     }
 
     /**
@@ -60,7 +62,16 @@ public class SensorProcessor {
      */
     public void start(int workerCount) {
         // TODO: validate workerCount
+
         // TODO: start the requested number of workers
+        flag = true;
+        //totalProcessed.incrementAndGet();
+        //use combine method
+       // stats.updateAndGet(existing -> {
+            //DoubleSummaryStatistics updated = new DoubleSummaryStatistics();
+       // });
+        //updated.combine(existing);
+        //updated.accept(reading.value());//add a new value to summary statistics
     }
 
     /**
@@ -72,6 +83,8 @@ public class SensorProcessor {
      */
     private void workerLoop() {
         // TODO: implement the worker behavior
+        //poll checks to make sure it's not empty, if you use take need to check it's not empty
+       // SensorReading reading = queue.poll(100, TimeUnit.MILLISECONDS);
     }
 
     /**
