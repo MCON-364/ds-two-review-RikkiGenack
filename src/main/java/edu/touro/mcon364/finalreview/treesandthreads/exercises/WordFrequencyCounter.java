@@ -3,6 +3,9 @@ package edu.touro.mcon364.finalreview.treesandthreads.exercises;
 import java.util.*;
 import java.util.stream.*;
 
+import static java.util.Map.Entry.comparingByValue;
+import static java.util.stream.Collectors.toList;
+
 /**
  * In-class Exercise 1 - Word Frequency Counter (TreeMap + Streams)
  *
@@ -44,7 +47,11 @@ public class WordFrequencyCounter {
     public WordFrequencyCounter(List<String> words) {
         // TODO: validate that words is not null
         // TODO: store a defensive copy so outside code cannot mutate this object
-        this.words = List.of();
+
+        if (words==null){
+            throw new NullPointerException();
+        }
+        this.words = List.copyOf(words);
     }
 
     /**
@@ -54,7 +61,8 @@ public class WordFrequencyCounter {
      */
     public TreeMap<String, Long> buildFrequencyMap() {
         // TODO
-        return new TreeMap<>();
+        return words.stream().collect(
+                Collectors.groupingBy(word->word, TreeMap::new, Collectors.counting()));
     }
 
     /**
@@ -65,7 +73,8 @@ public class WordFrequencyCounter {
      */
     public List<String> getTopN(int n) {
         // TODO
-        return List.of();
+        return buildFrequencyMap().entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed()).limit(n).map(Map.Entry::getKey).toList();
     }
 
     /**
@@ -77,12 +86,11 @@ public class WordFrequencyCounter {
      */
     public List<String> getWordsStartingWith(char prefix) {
         // TODO
-        return List.of();
+        return buildFrequencyMap().keySet().stream().filter(word->word.charAt(0)==prefix).toList();
     }
 
     /**
      * Finds the most frequent word in the alphabetical range [from, to] inclusive.
-     *
      *
      * @param from lower bound word (inclusive)
      * @param to   upper bound word (inclusive)
@@ -90,6 +98,7 @@ public class WordFrequencyCounter {
      */
     public Optional<String> getMostFrequentInRange(String from, String to) {
         // TODO
-        return Optional.empty();
+        return buildFrequencyMap().subMap(from, true, to,true).entrySet()
+                .stream().max(comparingByValue()).map(Map.Entry::getKey);
     }
 }
