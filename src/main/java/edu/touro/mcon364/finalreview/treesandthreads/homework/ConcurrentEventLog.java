@@ -56,6 +56,8 @@ public class ConcurrentEventLog {
      */
     public void logEvent(long timestamp, String message) {
         // TODO
+        long key = timestamp * 1_000_000L + sequence.getAndIncrement();
+        log.put(key, message);
     }
 
     /**
@@ -71,6 +73,21 @@ public class ConcurrentEventLog {
     public void runConcurrentSources(List<String> sources, int eventsEach)
             throws InterruptedException {
         // TODO
+        ExecutorService pool = Executors.newFixedThreadPool(sources.size());
+        for (String source: sources){
+            for(int i = 0; i<eventsEach; i++){
+                int finalI = i;
+                pool.submit(() ->
+                {
+                    logEvent(System.currentTimeMillis(), source + "-" + finalI);
+                });
+            }
+        }
+        pool.shutdown();
+        if(!pool.awaitTermination(600, TimeUnit.MILLISECONDS)){
+            pool.shutdownNow();
+        }
+
     }
 
     /**
@@ -79,7 +96,7 @@ public class ConcurrentEventLog {
      */
     public List<String> getEventsAfter(long timestamp) {
         // TODO
-        return List.of();
+        return log.tailMap(timestamp*1_000_000L, false).values().stream().toList();
     }
 
     /**
@@ -87,7 +104,7 @@ public class ConcurrentEventLog {
      */
     public List<String> getEventsBetween(long from, long to) {
         // TODO
-        return List.of();
+        return log.subMap(from*1_000_000L,true, to*1_000_000L+999_999L, true).values().stream().toList();
     }
 
     /**
@@ -95,7 +112,8 @@ public class ConcurrentEventLog {
      */
     public List<String> getMostRecentN(int n) {
         // TODO
-        return List.of();
+        return log.entrySet().stream().sorted(Map.Entry.<Long, String>comparingByKey().reversed())
+                .limit(n).map(Map.Entry::getValue).toList();
     }
 
     /** Returns the total number of logged events. */

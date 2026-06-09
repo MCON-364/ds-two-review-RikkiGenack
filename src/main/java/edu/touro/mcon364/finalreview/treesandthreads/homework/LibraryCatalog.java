@@ -36,7 +36,10 @@ public class LibraryCatalog {
 
     public LibraryCatalog(List<Book> books) {
         // TODO: validate non-null, store a defensive copy
-        this.books = List.of();
+        if (books==null){
+            throw new RuntimeException();
+        }
+        this.books = List.copyOf(books);
     }
 
     /**
@@ -46,16 +49,19 @@ public class LibraryCatalog {
      */
     public TreeMap<String, Book> buildTitleIndex() {
         // TODO
-        return new TreeMap<>();
+        // toMap takes key, value, duplicate resolver and map type
+        return books.stream().collect(Collectors.toMap(Book::title,book->book, (existing, replacement) -> existing, TreeMap::new));
     }
 
     /**
      * Returns a TreeMap grouping books by author; each author maps to a
      * TreeSet of their books sorted by title.
      */
+    //groupingBy takes key, map constructor, value collector
     public TreeMap<String, TreeSet<Book>> buildAuthorIndex() {
         // TODO
-        return new TreeMap<>();
+        return books.stream().collect(Collectors.groupingBy(Book::author,
+                TreeMap::new, Collectors.toCollection(TreeSet::new)));
     }
 
     /**
@@ -64,7 +70,8 @@ public class LibraryCatalog {
      */
     public List<Book> getBooksPublishedBefore(int year) {
         // TODO
-        return List.of();
+        return books.stream().filter(book->book.year()<year)
+                .sorted(Comparator.comparing(Book::title)).toList();
     }
 
     /**
@@ -73,7 +80,9 @@ public class LibraryCatalog {
      */
     public List<String> getAuthorsWithMoreThan(int n) {
         // TODO
-        return List.of();
+        return books.stream().collect(Collectors.groupingBy(Book::author, TreeMap::new, Collectors.counting())).
+        entrySet().stream().filter(entry->entry.getValue()>n).map(entry->entry.getKey()).toList();
+
     }
 
     /**
@@ -82,7 +91,8 @@ public class LibraryCatalog {
      */
     public List<Book> findByTitlePrefix(String prefix) {
         // TODO
-        return List.of();
+        NavigableMap<String, Book> myMap = buildTitleIndex();
+        return myMap.subMap(prefix, prefix+1).values().stream().toList();
     }
 }
 
