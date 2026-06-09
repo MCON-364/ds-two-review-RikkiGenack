@@ -96,7 +96,7 @@ public class LogProcessor {
             pool.submit(() -> {
                 while (flag || !messages.isEmpty()) {
                     try {
-                        process(messages.take());
+                        process(messages.poll(100, TimeUnit.MILLISECONDS));
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
