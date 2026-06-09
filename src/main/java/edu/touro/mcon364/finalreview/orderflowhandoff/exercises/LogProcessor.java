@@ -137,12 +137,12 @@ public class LogProcessor {
             if (pool!=null) {
                 flag = false;//set flag to stop accepting work
                 pool.shutdown();
-                pool.awaitTermination(10, TimeUnit.NANOSECONDS);
+                pool.awaitTermination(1000000, TimeUnit.NANOSECONDS);
                 pool.shutdownNow();
                 //drain queue
-                LogMessage msg;
-                while ((msg = messages.poll()) != null) {
-                    process(msg);
+                LogMessage message = messages.poll(100, TimeUnit.MILLISECONDS);
+                if (message != null) {
+                    process(message);
                 }
             }
         }
