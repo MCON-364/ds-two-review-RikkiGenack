@@ -4,6 +4,8 @@ import edu.touro.mcon364.finalreview.model.LogLevel;
 import edu.touro.mcon364.finalreview.model.LogMessage;
 
 import java.util.Map;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * LogProcessor.
@@ -65,54 +67,102 @@ public class LogProcessor {
     /**
      * Accept one message for processing.
      */
+
+    LinkedBlockingQueue<LogMessage> messages = new LinkedBlockingQueue();
+    volatile boolean flag = false;// while still accepting work
+    ConcurrentHashMap<LogLevel, Integer> levelCounts = new ConcurrentHashMap<>();
+    ExecutorService pool;
+
     public void submit(LogMessage message) {
         // TODO: implement
+        if (flag) {
+            messages.add(message);
+        }
     }
-
+//in order to not have null: this.submisssions = LIst.copyOf(Objects.requireNonNull(submissions));
     /**
      * Start the requested number of background workers.
      */
+
+
     public void start(int workerCount) {
         // TODO: implement
+        if (workerCount <= 0) {
+            throw new IllegalArgumentException();
+        }
+        flag = true;
+        pool = Executors.newFixedThreadPool(workerCount);
+        for (int i = 0; i < workerCount; i++) {
+            pool.submit(() -> {
+                while (flag || !messages.isEmpty()) {
+                    try {
+                        process(messages.poll(100, TimeUnit.MILLISECONDS));
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+            });
+        }
     }
 
-    /**
-     * The work done by one background worker.
-     *
-     * You may keep this helper method, rename it, or replace it with another
-     * private helper if your design is clearer that way.
-     */
-    private void workerLoop() {
-        // TODO: implement
-    }
+        /**
+         * The work done by one background worker.
+         *
+         * You may keep this helper method, rename it, or replace it with another
+         * private helper if your design is clearer that way.
+         */
+        private void workerLoop() {
+            // TODO: implement
+        }
 
-    /**
-     * Process one message and update whatever statistics this class tracks.
-     */
-    private void process(LogMessage message) {
-        // TODO: implement
-    }
+        /**
+         * Process one message and update whatever statistics this class tracks.
+         */
 
-    /**
-     * Stop the processor and wait for worker threads to finish.
-     */
-    public void stop() throws InterruptedException {
-        // TODO: implement
-    }
+        AtomicInteger counter = new AtomicInteger(0);
+        private void process(LogMessage message){
+            // TODO: implement
+            counter.incrementAndGet();
+            // atomic operation takes key, value and method. Here it will take the current value,
+            // and second value into the new value
+            levelCounts.merge(message.level(), 1, Integer::sum);
 
-    /**
-     * Return the number of messages processed so far.
-     */
-    public int getTotalProcessed() {
-        // TODO: implement
-        return 0;
-    }
+        }
 
-    /**
-     * Return a safe snapshot of the counts by level.
-     */
-    public Map<LogLevel, Integer> getCountsByLevel() {
-        // TODO: implement
-        return Map.of();
+        /**
+         * Stop the processor and wait for worker threads to finish.
+         */
+        public void stop() throws InterruptedException {
+            // TODO: implement
+            if (pool!=null) {
+                flag = false;//set flag to stop accepting work
+                pool.shutdown();
+                pool.awaitTermination(1000000, TimeUnit.NANOSECONDS);
+                pool.shutdownNow();
+                //drain queue
+                LogMessage message = messages.poll(100, TimeUnit.MILLISECONDS);
+                if (message != null) {
+                    process(message);
+                }
+            }
+        }
+
+
+
+        /**
+         * Return the number of messages processed so far.
+         */
+        public int getTotalProcessed() {
+            // TODO: implement
+            return counter.get();
+        }
+
+        /**
+         * Return a safe snapshot of the counts by level.
+         */
+
+        public Map<LogLevel, Integer> getCountsByLevel () {
+            // TODO: implement
+            return Map.copyOf(levelCounts);
+        }
     }
-}

@@ -3,6 +3,9 @@ package edu.touro.mcon364.finalreview.orderflowhandoff.homework;
 import edu.touro.mcon364.finalreview.model.SensorReading;
 
 import java.util.DoubleSummaryStatistics;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Homework 2 — Sensor reading processor.
@@ -42,6 +45,12 @@ import java.util.DoubleSummaryStatistics;
  * - If several workers update the same stats, how will those updates stay correct?
  */
 public class SensorProcessor {
+    private volatile boolean flag = false;
+    private BlockingQueue<SensorReading> readings = new LinkedBlockingDeque<>();
+    private AtomicInteger totalProcessed = new AtomicInteger(0);
+
+    private final AtomicReference<DoubleSummaryStatistics> stats = new AtomicReference<>(new DoubleSummaryStatistics());
+    private ExecutorService pool;
 
     /**
      * Accept one sensor reading for processing.
@@ -50,6 +59,10 @@ public class SensorProcessor {
      */
     public void submit(SensorReading reading) {
         // TODO: decide where submitted readings should be stored
+    // if running add data to queue
+        if(flag == true){
+            readings.add(reading);
+        }
     }
 
     /**
@@ -60,9 +73,18 @@ public class SensorProcessor {
      */
     public void start(int workerCount) {
         // TODO: validate workerCount
-        // TODO: start the requested number of workers
-    }
 
+        // TODO: start the requested number of workers
+
+        if (workerCount < 1) {
+            throw new IllegalArgumentException();
+        }
+        flag = true;
+        pool = Executors.newFixedThreadPool(workerCount);
+        for(int i =0; i< workerCount;i++){
+            pool.submit(this::workerLoop);
+        }
+    }
     /**
      * Logic run by each worker.
      *
@@ -72,8 +94,24 @@ public class SensorProcessor {
      */
     private void workerLoop() {
         // TODO: implement the worker behavior
+        //poll checks to make sure it's not empty, if you use take need to check it's not empty
+        while (flag || !readings.isEmpty()) {
+            try {
+                SensorReading reading = readings.poll(100, TimeUnit.MILLISECONDS);
+                if(reading!=null){
+                    totalProcessed.incrementAndGet();
+                    stats.updateAndGet(existing->{
+                        DoubleSummaryStatistics newStats = new DoubleSummaryStatistics();
+                        newStats.combine(existing);
+                        newStats.accept(reading.value());
+                        return newStats;
+                    });
+                }
+            } catch (InterruptedException e) {
+               break;
+            }
+        }
     }
-
     /**
      * Stop the processor and wait for workers to finish.
      *
@@ -82,6 +120,12 @@ public class SensorProcessor {
     public void stop() throws InterruptedException {
         // TODO: signal that work should stop
         // TODO: wait for all workers to finish
+        flag=false;
+        if (pool!=null){
+            pool.shutdown();
+            pool.awaitTermination(60, TimeUnit.SECONDS);
+            pool.shutdownNow();
+        }
     }
 
     /**
@@ -89,7 +133,7 @@ public class SensorProcessor {
      */
     public int getTotalProcessed() {
         // TODO: return the processed count safely
-        return 0;
+        return totalProcessed.get();
     }
 
     /**
@@ -100,6 +144,6 @@ public class SensorProcessor {
      */
     public DoubleSummaryStatistics getStats() {
         // TODO: calculate or return the current statistics safely
-        return new DoubleSummaryStatistics();
+        return stats.get();
     }
 }
