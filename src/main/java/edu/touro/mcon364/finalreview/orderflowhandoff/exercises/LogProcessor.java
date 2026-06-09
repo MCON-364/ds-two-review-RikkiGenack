@@ -123,7 +123,6 @@ public class LogProcessor {
         private void process(LogMessage message){
             // TODO: implement
             counter.incrementAndGet();
-            submit(message);
             // atomic operation takes key, value and method. Here it will take the current value,
             // and second value into the new value
             levelCounts.merge(message.level(), 1, Integer::sum);
